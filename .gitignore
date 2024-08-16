@@ -1,3 +1,4 @@
 env/
 .env
 *.pdf
+vector_db/
