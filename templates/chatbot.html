@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Times New Roman', serif;
+            background-color: #121212;
+            color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: #1e1e1e;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #f0f0f0;
+        }
+        header a {
+            color: #f0f0f0;
+            text-decoration: none;
+            padding: 10px;
+        }
+        header a:hover {
+            background-color: #333;
+            border-radius: 5px;
+        }
+        .container {
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+        }
+        h1 {
+            margin-bottom: 20px;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        input[type="text"], button {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            width: calc(100% - 22px);
+        }
+        input[type="text"] {
+            border: 1px solid #333;
+            background-color: #1e1e1e;
+            color: #f0f0f0;
+        }
+        button {
+            background-color: #333;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #555;
+        }
+        .answer {
+            margin-top: 20px;
+        }
+        a {
+            color: #1e90ff;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Chatbot</h1>
+        <a href="/">Home</a>
+    </header>
+    <div class="container">
+        <form action="/chatbot" method="post">
+            <input type="hidden" name="pdf_path" value="{{ pdf_path }}">
+            <input type="text" name="question" placeholder="Ask a question about the PDF..." required>
+            <button type="submit">Ask</button>
+        </form>
+        {% if answer %}
+        <div class="answer">
+            <h2>Answer:</h2>
+            <p>{{ answer }}</p>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>
