@@ -9,6 +9,7 @@ from langchain.text_splitter import CharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.vectorstores.faiss import FAISS
 from fpdf import FPDF
+import openai  # Import OpenAI for PJbot
 import os
 
 app = Flask(__name__)
@@ -16,6 +17,7 @@ load_dotenv()
 
 # Load environment variables for OpenAI API Key
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+openai.api_key = OPENAI_API_KEY
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -144,28 +146,41 @@ def generate_questions(pdf_path, prompt):
 
 def get_chatbot_response(pdf_path, question):
     try:
-        loader = PyPDFLoader(file_path=pdf_path)
-        documents = loader.load()
+        # Use GPT-4 for responses when a PDF is uploaded
+        if pdf_path in conversation_history:
+            loader = PyPDFLoader(file_path=pdf_path)
+            documents = loader.load()
 
-        text_splitter = CharacterTextSplitter(
-            chunk_size=1000, chunk_overlap=50, separator="\n"
-        )
-        docs = text_splitter.split_documents(documents)
+            text_splitter = CharacterTextSplitter(
+                chunk_size=1000, chunk_overlap=50, separator="\n"
+            )
+            docs = text_splitter.split_documents(documents)
 
-        embeddings = OpenAIEmbeddings()
-        vectorstore = FAISS.from_documents(docs, embeddings)
-        vectorstore.save_local("vector_db")
+            embeddings = OpenAIEmbeddings()
+            vectorstore = FAISS.from_documents(docs, embeddings)
+            vectorstore.save_local("vector_db")
 
-        retrieval_qa_chat_prompt = hub.pull("langchain-ai/retrieval-qa-chat")
-        llm = ChatOpenAI()
-        combine_docs_chain = create_stuff_documents_chain(llm, retrieval_qa_chat_prompt)
+            retrieval_qa_chat_prompt = hub.pull("langchain-ai/retrieval-qa-chat")
+            llm = ChatOpenAI()
+            combine_docs_chain = create_stuff_documents_chain(llm, retrieval_qa_chat_prompt)
 
-        retriever = FAISS.load_local("vector_db", embeddings).as_retriever()
-        retrieval_chain = create_retrieval_chain(retriever, combine_docs_chain)
+            retriever = FAISS.load_local("vector_db", embeddings).as_retriever()
+            retrieval_chain = create_retrieval_chain(retriever, combine_docs_chain)
 
-        response = retrieval_chain.invoke({"input": question})
+            response = retrieval_chain.invoke({"input": question})
 
-        return response["answer"]
+            return response["answer"]
+
+        # For general knowledge, use OpenAI's GPT-4
+        else:
+            response = openai.ChatCompletion.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": "You are PJbot, an AI assistant."},
+                    {"role": "user", "content": question}
+                ]
+            )
+            return response['choices'][0]['message']['content']
 
     except Exception as e:
         logging.error(f"Error in get_chatbot_response: {e}")

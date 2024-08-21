@@ -9,89 +9,181 @@
         body {
             background-color: #121212;
             color: #ffffff;
+            font-family: 'Arial', sans-serif;
         }
         .container {
-            max-width: 800px;
-            margin-top: 20px;
+            max-width: 900px;
+            margin-top: 30px;
         }
         .chat-box {
             border: 1px solid #444;
-            border-radius: 5px;
-            padding: 10px;
-            height: 400px;
+            border-radius: 10px;
+            padding: 20px;
+            height: 500px;
             overflow-y: auto;
             background-color: #1e1e1e;
         }
         .chat-message {
-            margin-bottom: 10px;
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 5px;
         }
         .chat-message.user {
             color: #1e90ff;
+            background-color: #2a2a2a;
         }
         .chat-message.assistant {
             color: #32cd32;
+            background-color: #2a2a2a;
+        }
+        .form-control, .btn {
+            border-radius: 5px;
+        }
+        .form-control {
+            background-color: #333;
+            color: #fff;
+            border: 1px solid #444;
+        }
+        .form-control:focus {
+            background-color: #444;
+            color: #fff;
+            border-color: #555;
+        }
+        .btn-primary {
+            background-color: #1e90ff;
+            border-color: #1e90ff;
+        }
+        .btn-primary:hover {
+            background-color: #1c86ee;
+            border-color: #1c86ee;
+        }
+        .btn-primary:focus {
+            box-shadow: 0 0 0 0.2rem rgba(30, 144, 255, 0.5);
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+            border-color: #6c757d;
+        }
+        .btn-secondary:hover {
+            background-color: #5a6268;
+            border-color: #545b62;
+        }
+        .btn-secondary:focus {
+            box-shadow: 0 0 0 0.2rem rgba(108, 117, 125, 0.5);
+        }
+        .upload-form {
+            margin-bottom: 20px;
+        }
+        .chat-box::-webkit-scrollbar {
+            width: 8px;
+        }
+        .chat-box::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 5px;
+        }
+        .chat-box::-webkit-scrollbar-thumb:hover {
+            background: #666;
+        }
+        .textarea-expandable {
+            resize: none;
+            overflow: hidden;
+            min-height: 50px;
+        }
+        .textarea-expandable:focus {
+            border-color: #1e90ff;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Chatbot</h1>
-        <div class="chat-box" id="chat-box"></div>
-        <form id="upload-form" enctype="multipart/form-data">
-            <div class="mb-3">
-                <label for="pdf-upload" class="form-label">Upload PDF</label>
-                <input class="form-control" type="file" id="pdf-upload" name="file">
-            </div>
-            <button type="submit" class="btn btn-primary">Upload PDF</button>
-        </form>
-        <form id="chatbot-form" class="mt-3">
-            <div class="mb-3">
-                <label for="question" class="form-label">Ask a Question</label>
-                <input type="text" class="form-control" id="question" name="question" required>
-                <input type="hidden" id="pdf_path" name="pdf_path">
-            </div>
-            <button type="submit" class="btn btn-primary">Send</button>
-        </form>
+        <div id="upload-section" class="upload-form">
+            <h1 class="mb-4">Upload PDF and Chat</h1>
+            <form id="upload-form" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label for="pdf-upload" class="form-label">Upload PDF</label>
+                    <input class="form-control" type="file" id="pdf-upload" name="file" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Upload PDF</button>
+            </form>
+        </div>
+        <div id="chat-section" style="display: none;">
+            <div class="chat-box" id="chat-box"></div>
+            <form id="chatbot-form" class="mt-4">
+                <div class="mb-3">
+                    <label for="question" class="form-label">Ask a Question</label>
+                    <textarea class="form-control textarea-expandable" id="question" name="question" placeholder="Type your question here..." required></textarea>
+                    <input type="hidden" id="pdf_path" name="pdf_path">
+                </div>
+                <button type="submit" class="btn btn-primary">Send</button>
+            </form>
+            <button class="btn btn-secondary mt-3" onclick="window.location.href='/';">Back to Upload</button>
+        </div>
     </div>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-        $('#upload-form').on('submit', function(e) {
-            e.preventDefault();
+        $(document).ready(function() {
+            // Handle file upload
+            $('#upload-form').on('submit', function(e) {
+                e.preventDefault();
 
-            const formData = new FormData(this);
+                const formData = new FormData(this);
+                const $uploadSection = $('#upload-section');
+                const $chatSection = $('#chat-section');
+                const $chatBox = $('#chat-box');
 
-            $.ajax({
-                url: '/chatbot',
-                type: 'POST',
-                data: formData,
-                contentType: false,
-                processData: false,
-                success: function(response) {
-                    $('#pdf_path').val(response.pdf_path);
-                    $('#chat-box').append('<div class="chat-message assistant">PDF uploaded successfully. You can now ask questions.</div>');
-                },
-                error: function(xhr, status, error) {
-                    $('#chat-box').append('<div class="chat-message assistant">An error occurred while uploading the PDF. Please try again.</div>');
-                }
+                $.ajax({
+                    url: '/chatbot',
+                    type: 'POST',
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function(response) {
+                        $('#pdf_path').val(response.pdf_path);
+                        $uploadSection.hide();
+                        $chatSection.show();
+                        $chatBox.append('<div class="chat-message assistant">PDF uploaded successfully. You can now ask questions.</div>');
+                    },
+                    error: function(xhr, status, error) {
+                        $chatBox.append('<div class="chat-message assistant">An error occurred while uploading the PDF. Please try again.</div>');
+                    }
+                });
             });
-        });
 
-        $('#chatbot-form').on('submit', function(e) {
-            e.preventDefault();
+            // Handle chatbot interactions
+            $('#chatbot-form').on('submit', function(e) {
+                e.preventDefault();
 
-            const formData = $(this).serialize();
+                const formData = $(this).serialize();
+                const $chatBox = $('#chat-box');
+                const $questionInput = $('#question');
+                
+                $.ajax({
+                    url: '/ask',
+                    type: 'POST',
+                    data: formData,
+                    success: function(response) {
+                        $chatBox.append('<div class="chat-message user">' + $questionInput.val() + '</div>');
+                        $chatBox.append('<div class="chat-message assistant">' + response.answer + '</div>');
+                        $chatBox.scrollTop($chatBox[0].scrollHeight);
+                        $questionInput.val('');
+                    },
+                    error: function(xhr, status, error) {
+                        $chatBox.append('<div class="chat-message assistant">An error occurred while getting the response. Please try again.</div>');
+                    }
+                });
+            });
 
-            $.ajax({
-                url: '/ask',
-                type: 'POST',
-                data: formData,
-                success: function(response) {
-                    const pdfPath = $('#pdf_path').val();
-                    $('#chat-box').append('<div class="chat-message user">' + $('input[name="question"]').val() + '</div>');
-                    $('#chat-box').append('<div class="chat-message assistant">' + response.answer + '</div>');
-                },
-                error: function(xhr, status, error) {
-                    $('#chat-box').append('<div class="chat-message assistant">An error occurred while getting the response. Please try again.</div>');
+            // Auto-expand textarea
+            $('#question').on('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+            });
+
+            // Submit on Enter key press
+            $('#question').on('keypress', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    $('#chatbot-form').submit();
                 }
             });
         });
