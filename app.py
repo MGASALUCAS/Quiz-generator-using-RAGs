@@ -120,8 +120,11 @@ def generate_questions(pdf_path, prompt):
         loader = PyPDFLoader(file_path=pdf_path)
         documents = loader.load()
 
+        # Adjusting chunk_size and chunk_overlap for better accuracy
         text_splitter = CharacterTextSplitter(
-            chunk_size=1000, chunk_overlap=50, separator="\n"
+            chunk_size=500,  # Decreased chunk size for more granular splitting
+            chunk_overlap=100,  # Increased overlap to maintain context
+            separator="\n"
         )
         docs = text_splitter.split_documents(documents)
 
@@ -151,8 +154,11 @@ def get_chatbot_response(pdf_path, question):
             loader = PyPDFLoader(file_path=pdf_path)
             documents = loader.load()
 
+            # Adjusting chunk_size and chunk_overlap for better accuracy
             text_splitter = CharacterTextSplitter(
-                chunk_size=1000, chunk_overlap=50, separator="\n"
+                chunk_size=500,  # Decreased chunk size for more granular splitting
+                chunk_overlap=100,  # Increased overlap to maintain context
+                separator="\n"
             )
             docs = text_splitter.split_documents(documents)
 
