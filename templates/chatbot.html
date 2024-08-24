@@ -3,286 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="./favcon/plogo.jpg" type="image/x-icon">
     <title>Chatbot</title>
-    <!-- Link to Favicon -->
-    <link rel="icon" href="/path/to/favcon.png" type="image/x-icon">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        html, body {
-            height: 100%;
-            margin: 0;
-            font-family: 'Arial', sans-serif;
-            background-color: #121212;
-            color: #ffffff;
+        body {
+            background-color: #f0f0f5;
+            font-family: Arial, sans-serif;
         }
         .container {
+            margin-top: 50px;
+        }
+        .chatbot-popup {
             display: flex;
             flex-direction: column;
-            height: 100vh;
-            max-width: 100%;
+            margin-top: 20px;
         }
-        .content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            padding: 20px;
+        .chatbot-header {
+            background-color: #007bff;
+            color: white;
+            padding: 10px;
+            border-radius: 10px 10px 0 0;
+            font-weight: bold;
         }
-        .chat-box {
-            border: 1px solid #444;
-            border-radius: 10px;
-            padding: 20px;
+        .chatbot-messages {
             flex: 1;
             overflow-y: auto;
-            background-color: #1e1e1e;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            height: 300px;
         }
-        .chat-message {
-            margin-bottom: 15px;
+        .chatbot-input {
+            display: flex;
+            margin-top: 10px;
+        }
+        .chatbot-input input {
+            flex: 1;
             padding: 10px;
             border-radius: 5px;
+            border: 1px solid #ccc;
         }
-        .chat-message.user {
-            color: #1e90ff;
-            background-color: #2a2a2a;
-            align-self: flex-end;
-        }
-        .chat-message.assistant {
-            color: #32cd32;
-            background-color: #2a2a2a;
-            align-self: flex-start;
-        }
-        .form-control, .btn {
-            border-radius: 5px;
-        }
-        .form-control {
-            background-color: #333;
-            color: #fff;
-            border: 1px solid #444;
-        }
-        .form-control:focus {
-            background-color: #444;
-            color: #fff;
-            border-color: #555;
-        }
-        .btn-primary {
-            background-color: #1e90ff;
-            border-color: #1e90ff;
-        }
-        .btn-primary:hover {
-            background-color: #1c86ee;
-            border-color: #1c86ee;
-        }
-        .btn-primary:focus {
-            box-shadow: 0 0 0 0.2rem rgba(30, 144, 255, 0.5);
-        }
-        .btn-secondary {
-            background-color: #6c757d;
-            border-color: #6c757d;
-        }
-        .btn-secondary:hover {
-            background-color: #5a6268;
-            border-color: #545b62;
-        }
-        .btn-secondary:focus {
-            box-shadow: 0 0 0 0.2rem rgba(108, 117, 125, 0.5);
-        }
-        .upload-form {
-            margin-bottom: 20px;
-        }
-        .chat-box::-webkit-scrollbar {
-            width: 8px;
-        }
-        .chat-box::-webkit-scrollbar-thumb {
-            background: #555;
-            border-radius: 5px;
-        }
-        .chat-box::-webkit-scrollbar-thumb:hover {
-            background: #666;
-        }
-        .textarea-expandable {
-            resize: none;
-            overflow: hidden;
-            min-height: 50px;
-        }
-        .textarea-expandable:focus {
-            border-color: #1e90ff;
-        }
-        .circle-btn {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 50px;
-            height: 50px;
-            background-color: rgba(30, 144, 255, 0.8);
+        .chatbot-input button {
+            padding: 10px;
             border: none;
-            border-radius: 50%;
-            color: #fff;
-            text-align: center;
-            line-height: 50px;
-            font-size: 24px;
-            cursor: pointer;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-            transition: opacity 0.3s ease, transform 0.3s ease;
-            opacity: 0;
-            z-index: 1000;
-        }
-        .circle-btn.show {
-            opacity: 1;
-            transform: scale(1);
-        }
-        .circle-btn.hide {
-            opacity: 0;
-            transform: scale(0.5);
-        }
-        .circle-btn .tooltip {
-            display: none;
-            position: absolute;
-            bottom: 60px;
-            right: 0;
-            background: rgba(30, 144, 255, 0.9);
-            color: #fff;
-            padding: 5px;
+            background-color: #007bff;
+            color: white;
             border-radius: 5px;
-            font-size: 14px;
-            white-space: nowrap;
-        }
-        .circle-btn.show-tooltip .tooltip {
-            display: block;
+            margin-left: 5px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div id="upload-section" class="content upload-form">
-            <h1 class="mb-4">Upload PDF and Chat</h1>
-            <form id="upload-form" enctype="multipart/form-data">
-                <div class="mb-3">
-                    <label for="pdf-upload" class="form-label">Upload PDF</label>
-                    <input class="form-control" type="file" id="pdf-upload" name="file" required>
-                </div>
-                <button type="submit" class="btn btn-primary">Upload PDF</button>
-            </form>
-        </div>
-        <div id="chat-section" class="content" style="display: none;">
-            <div class="chat-box" id="chat-box"></div>
-            <form id="chatbot-form" class="mt-4">
-                <div class="mb-3">
-                    <label for="question" class="form-label">Ask a Question</label>
-                    <textarea class="form-control textarea-expandable" id="question" name="question" placeholder="Type your question here..." required></textarea>
-                    <input type="hidden" id="pdf_path" name="pdf_path">
-                </div>
-                <button type="submit" class="btn btn-primary">Send</button>
-            </form>
-        </div>
-        <div class="circle-btn" id="back-to-upload-btn">
-            <span class="tooltip">Back to Upload</span>
-            &#x2190;
+        <h1 class="text-center">Chat with the Bot</h1>
+        <form id="uploadForm" action="/chatbot" method="POST" enctype="multipart/form-data">
+            <div class="mb-4">
+                <label for="file" class="form-label">Upload PDF File:</label>
+                <input class="form-control" type="file" id="file" name="file" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Upload and Chat</button>
+        </form>
+        <div class="chatbot-popup" id="chatbotPopup">
+            <div class="chatbot-header">Chatbot</div>
+            <div class="chatbot-messages" id="chatbotMessages"></div>
+            <div class="chatbot-input">
+                <input type="text" id="chatbotInput" placeholder="Type a message..." />
+                <button id="sendMessage">Send</button>
+            </div>
         </div>
     </div>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- Scripts -->
     <script>
-        $(document).ready(function() {
-            function scrollToBottom() {
-                $('#chat-box').scrollTop($('#chat-box')[0].scrollHeight);
-            }
+        document.addEventListener('DOMContentLoaded', () => {
+            const chatMessages = document.getElementById('chatbotMessages');
+            const chatInput = document.getElementById('chatbotInput');
+            const sendMessageButton = document.getElementById('sendMessage');
 
-            function showBackButton() {
-                $('#back-to-upload-btn').addClass('show').removeClass('hide');
-            }
-
-            function hideBackButton() {
-                $('#back-to-upload-btn').addClass('hide').removeClass('show');
-            }
-
-            // Handle file upload
-            $('#upload-form').on('submit', function(e) {
-                e.preventDefault();
-
-                const formData = new FormData(this);
-                const $uploadSection = $('#upload-section');
-                const $chatSection = $('#chat-section');
-                const $chatBox = $('#chat-box');
-
-                $('#upload-form button[type="submit"]').prop('disabled', true).text('Uploading...');
-
-                $.ajax({
-                    url: '/chatbot',
-                    type: 'POST',
-                    data: formData,
-                    contentType: false,
-                    processData: false,
-                    success: function(response) {
-                        $('#pdf_path').val(response.pdf_path);
-                        $uploadSection.fadeOut(300, function() {
-                            $chatSection.fadeIn(300);
-                            showBackButton();
-                            $chatBox.append('<div class="chat-message assistant">PDF uploaded successfully. You can now ask questions.</div>');
-                            scrollToBottom();
-                        });
-                        $('#upload-form button[type="submit"]').prop('disabled', false).text('Upload PDF');
-                    },
-                    error: function(xhr, status, error) {
-                        $chatBox.append('<div class="chat-message assistant">An error occurred while uploading the PDF. Please try again.</div>');
-                        $('#upload-form button[type="submit"]').prop('disabled', false).text('Upload PDF');
-                    }
-                });
-            });
-
-            // Handle chatbot interactions
-            $('#chatbot-form').on('submit', function(e) {
-                e.preventDefault();
-
-                const formData = $(this).serialize();
-                const $chatBox = $('#chat-box');
-                const $questionInput = $('#question');
-
-                $.ajax({
-                    url: '/ask',
-                    type: 'POST',
-                    data: formData,
-                    success: function(response) {
-                        $chatBox.append('<div class="chat-message user">' + $questionInput.val() + '</div>');
-                        $chatBox.append('<div class="chat-message assistant">' + response.answer + '</div>');
-                        scrollToBottom();
-                        $questionInput.val('').css('height', 'auto');
-                    },
-                    error: function(xhr, status, error) {
-                        $chatBox.append('<div class="chat-message assistant">An error occurred while getting the response. Please try again.</div>');
-                    }
-                });
-            });
-
-            // Auto-expand textarea
-            $('#question').on('input', function() {
-                this.style.height = 'auto';
-                this.style.height = (this.scrollHeight) + 'px';
-            });
-
-            // Submit on Enter key press
-            $('#question').on('keypress', function(e) {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    $('#chatbot-form').submit();
-                }
-            });
-
-            // Handle circle button
-            $('#back-to-upload-btn').on('click', function() {
-                window.location.href = '/';
-            });
-
-            // Initially show back button if chat-section is visible
-            if ($('#chat-section').is(':visible')) {
-                showBackButton();
-            } else {
-                hideBackButton();
-            }
-
-            // Show button with fade effect based on scroll position
-            $(window).on('scroll', function() {
-                if ($(this).scrollTop() > 50) {
-                    showBackButton();
-                } else {
-                    hideBackButton();
+            sendMessageButton.addEventListener('click', () => {
+                const message = chatInput.value.trim();
+                if (message) {
+                    chatMessages.innerHTML += `<div><strong>You:</strong> ${message}</div>`;
+                    chatInput.value = '';
+                    
+                    fetch('/ask', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: new URLSearchParams({
+                            'question': message,
+                            'pdf_path': document.getElementById('file').value
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        chatMessages.innerHTML += `<div><strong>Bot:</strong> ${data.answer}</div>`;
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                    })
+                    .catch(error => console.error('Error:', error));
                 }
             });
         });

@@ -1,4 +1,5 @@
 import logging
+import os
 from flask import Flask, request, render_template, send_file, jsonify
 from dotenv import load_dotenv
 from langchain import hub
@@ -9,8 +10,7 @@ from langchain.text_splitter import CharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.vectorstores.faiss import FAISS
 from fpdf import FPDF
-import openai  # Import OpenAI for PJbot
-import os
+import openai
 
 app = Flask(__name__)
 load_dotenv()
@@ -59,26 +59,23 @@ def upload_content():
         logging.error(f"Error in upload_content: {e}")
         return jsonify({"error": "An error occurred while processing the request."}), 500
 
-@app.route('/chatbot', methods=['GET', 'POST'])
+@app.route('/chatbot', methods=['POST'])
 def chatbot():
     try:
-        if request.method == 'POST':
-            if 'file' not in request.files:
-                return jsonify({"error": "No file uploaded!"}), 400
+        if 'file' not in request.files:
+            return jsonify({"error": "No file uploaded!"}), 400
 
-            file = request.files['file']
-            if file.filename == '':
-                return jsonify({"error": "No selected file!"}), 400
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({"error": "No selected file!"}), 400
 
-            pdf_path = os.path.join('uploads', file.filename)
-            file.save(pdf_path)
+        pdf_path = os.path.join('uploads', file.filename)
+        file.save(pdf_path)
 
-            # Initialize conversation history for the new PDF
-            conversation_history[pdf_path] = []
+        # Initialize conversation history for the new PDF
+        conversation_history[pdf_path] = []
 
-            return jsonify({"pdf_path": pdf_path})
-
-        return render_template('chatbot.html')
+        return jsonify({"pdf_path": pdf_path})
 
     except Exception as e:
         logging.error(f"Error in chatbot: {e}")
@@ -87,8 +84,9 @@ def chatbot():
 @app.route('/ask', methods=['POST'])
 def ask_chatbot():
     try:
-        question = request.form.get('question')
-        pdf_path = request.form.get('pdf_path')
+        data = request.json
+        question = data.get('question')
+        pdf_path = data.get('pdf_path')
 
         if not question or not pdf_path:
             return jsonify({"error": "Question or PDF path not provided!"}), 400
@@ -120,10 +118,9 @@ def generate_questions(pdf_path, prompt):
         loader = PyPDFLoader(file_path=pdf_path)
         documents = loader.load()
 
-        # Adjusting chunk_size and chunk_overlap for better accuracy
         text_splitter = CharacterTextSplitter(
-            chunk_size=500,  # Decreased chunk size for more granular splitting
-            chunk_overlap=100,  # Increased overlap to maintain context
+            chunk_size=500,
+            chunk_overlap=100,
             separator="\n"
         )
         docs = text_splitter.split_documents(documents)
@@ -141,7 +138,7 @@ def generate_questions(pdf_path, prompt):
 
         response = retrieval_chain.invoke({"input": prompt})
 
-        return response["answer"]
+        return response.get("answer", "No answer generated.")
 
     except Exception as e:
         logging.error(f"Error in generate_questions: {e}")
@@ -149,15 +146,13 @@ def generate_questions(pdf_path, prompt):
 
 def get_chatbot_response(pdf_path, question):
     try:
-        # Use GPT-4 for responses when a PDF is uploaded
         if pdf_path in conversation_history:
             loader = PyPDFLoader(file_path=pdf_path)
             documents = loader.load()
 
-            # Adjusting chunk_size and chunk_overlap for better accuracy
             text_splitter = CharacterTextSplitter(
-                chunk_size=500,  # Decreased chunk size for more granular splitting
-                chunk_overlap=100,  # Increased overlap to maintain context
+                chunk_size=500,
+                chunk_overlap=100,
                 separator="\n"
             )
             docs = text_splitter.split_documents(documents)
@@ -175,21 +170,34 @@ def get_chatbot_response(pdf_path, question):
 
             response = retrieval_chain.invoke({"input": question})
 
-            return response["answer"]
+            # If the response is not adequate, fallback to GPT-4
+            if response and response.get("answer", "").strip():
+                return response["answer"]
+            else:
+                # Fallback to GPT-4
+                return fallback_to_general_knowledge(question)
 
-        # For general knowledge, use OpenAI's GPT-4
         else:
-            response = openai.ChatCompletion.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": "You are PJbot, an AI assistant."},
-                    {"role": "user", "content": question}
-                ]
-            )
-            return response['choices'][0]['message']['content']
+            # For general knowledge, use OpenAI's GPT-4
+            return fallback_to_general_knowledge(question)
 
     except Exception as e:
         logging.error(f"Error in get_chatbot_response: {e}")
+        return "Error getting response."
+
+def fallback_to_general_knowledge(question):
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are PJbot, an AI assistant."},
+                {"role": "user", "content": question}
+            ]
+        )
+        return response['choices'][0]['message']['content']
+
+    except Exception as e:
+        logging.error(f"Error in fallback_to_general_knowledge: {e}")
         return "Error getting response."
 
 def create_pdf(content):
