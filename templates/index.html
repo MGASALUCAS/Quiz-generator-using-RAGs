@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="./favcon/plogo.jpg" type="image/x-icon">
-    <title>PDF QA</title>
+    <title>PDF QA Chatbot</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
@@ -67,21 +67,23 @@
             bottom: 80px;
             right: 20px;
             width: 350px;
-            height: 500px;
+            max-height: 500px;
             background-color: #1f1f1f;
             border: 1px solid #ddd;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             border-radius: 10px;
             overflow: hidden;
             z-index: 1000;
-            transition: transform 0.3s ease-in-out;
+            transition: transform 0.3s ease-in-out, opacity 0.3s ease;
         }
         .chatbot-popup.show {
             display: block;
             transform: translateY(0);
+            opacity: 1;
         }
         .chatbot-popup.hide {
             transform: translateY(100%);
+            opacity: 0;
         }
         .chatbot-popup-header {
             background-color: #007bff;
@@ -102,7 +104,7 @@
         }
         .chatbot-popup-body {
             padding: 10px;
-            height: calc(100% - 120px);
+            height: calc(100% - 80px); /* Adjusted to account for header/footer */
             overflow-y: auto;
             color: white;
             display: flex;
@@ -143,6 +145,9 @@
             background-color: #2a2a2a;
             color: white;
         }
+        .chatbot-popup-footer .input-group input.fade-out {
+            animation: fadeOut 1s forwards;
+        }
         .chatbot-popup-footer .input-group button {
             border-radius: 0 15px 15px 0;
             background-color: #007bff;
@@ -173,46 +178,46 @@
         .suggestions button:hover {
             background-color: #007bff;
         }
+        .loading-spinner {
+            border: 4px solid rgba(0,0,0,0.1);
+            border-left: 4px solid #007bff;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            margin: auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+            }
+            to {
+                opacity: 0;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1 class="text-center section-title">Upload PDF and Ask Questions</h1>
-        <form action="/upload" method="POST" enctype="multipart/form-data">
-            <div class="mb-4">
-                <label for="file" class="form-label">Upload PDF File:</label>
-                <input class="form-control" type="file" id="file" name="file" required>
-            </div>
-            <div class="mb-4">
-                <label for="prompt" class="form-label">Enter your prompt:</label>
-                <input class="form-control" type="text" id="prompt" name="prompt" required>
-            </div>
-            <div class="mb-4">
-                <label for="save_as_pdf" class="form-label">Do you want to save the answer as a PDF?</label>
-                <select class="form-control" id="save_as_pdf" name="save_as_pdf" required>
-                    <option value="yes">Yes</option>
-                    <option value="no">No</option>
-                </select>
-            </div>
-            <button type="submit" class="btn custom-btn">Submit</button>
-        </form>
-    </div>
-
     <!-- Chatbot Button -->
     <div class="chatbot-button" onclick="toggleChatbot()">🤖</div>
 
     <!-- Chatbot Popup -->
     <div class="chatbot-popup hide" id="chatbotPopup">
         <div class="chatbot-popup-header">
-            <span>PJbot</span>
+            <span>Chatbot</span>
             <button class="close-btn" onclick="toggleChatbot()">×</button>
         </div>
         <div class="chatbot-popup-body" id="chatbotBody">
             <div class="chatbot-messages" id="chatbotMessages"></div>
         </div>
         <div class="chatbot-popup-footer">
-            <div class="input-group">
-                <input type="text" id="chatbotQuestion" class="form-control" placeholder="Ask a question...">
+            <div class="input-group mb-3">
+                <input type="file" id="chatbotFile" class="form-control" placeholder="Upload PDF" aria-label="Upload PDF">
+                <input type="text" id="chatbotQuestion" class="form-control" placeholder="Ask a question..." aria-label="Ask a question">
                 <button class="btn custom-btn" onclick="sendMessage()">Send</button>
             </div>
             <div class="suggestions">
@@ -220,8 +225,6 @@
                 <button onclick="suggest('Summarize the content')">Summarize the content</button>
                 <button onclick="suggest('Give key points')">Give key points</button>
             </div>
-            <input type="file" id="chatbotFile" style="display: none;">
-            <label for="chatbotFile" class="custom-btn">Upload File</label>
         </div>
     </div>
 
@@ -234,37 +237,74 @@
 
         function sendMessage() {
             const question = document.getElementById('chatbotQuestion').value;
+            const pdfFile = document.getElementById('chatbotFile').files[0];
+            const chatbotMessages = document.getElementById('chatbotMessages');
+
             if (!question) {
                 alert('Please enter a question.');
                 return;
             }
 
-            const chatbotMessages = document.getElementById('chatbotMessages');
-            chatbotMessages.innerHTML += `<div class="chatbot-message user">${question}</div>`;
-            document.getElementById('chatbotQuestion').value = '';
+            if (pdfFile) {
+                // Display loading spinner while processing
+                const loadingSpinner = document.createElement('div');
+                loadingSpinner.className = 'loading-spinner';
+                chatbotMessages.appendChild(loadingSpinner);
+                
+                const formData = new FormData();
+                formData.append('file', pdfFile);
+                formData.append('question', question);
 
-            fetch('/ask', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ question }),
-            })
-            .then(response => response.json())
-            .then(data => {
-                const botResponse = data.answer;
-                chatbotMessages.innerHTML += `<div class="chatbot-message bot">${botResponse}</div>`;
-                chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                chatbotMessages.innerHTML += `<div class="chatbot-message bot">Sorry, something went wrong.</div>`;
-                chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
-            });
+                fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    chatbotMessages.innerHTML += `<div class="chatbot-message user">${question}</div>`;
+                    chatbotMessages.innerHTML += `<div class="chatbot-message bot">${data.message}</div>`;
+                    chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+                    
+                    // Fade out the file input after successful upload
+                    const fileInput = document.getElementById('chatbotFile');
+                    fileInput.classList.add('fade-out');
+                    setTimeout(() => {
+                        fileInput.classList.remove('fade-out');
+                    }, 1000); // Duration should match CSS animation duration
+                    
+                    loadingSpinner.remove();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    chatbotMessages.innerHTML += `<div class="chatbot-message bot">Error uploading file. Please try again.</div>`;
+                    loadingSpinner.remove();
+                });
+            } else {
+                // If no file, just send the question
+                chatbotMessages.innerHTML += `<div class="chatbot-message user">${question}</div>`;
+                document.getElementById('chatbotQuestion').value = '';
+
+                fetch('/ask', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: new URLSearchParams({ question })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    chatbotMessages.innerHTML += `<div class="chatbot-message bot">${data.answer}</div>`;
+                    chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    chatbotMessages.innerHTML += `<div class="chatbot-message bot">Error processing your question. Please try again.</div>`;
+                });
+            }
         }
 
-        function suggest(message) {
-            document.getElementById('chatbotQuestion').value = message;
+        function suggest(suggestion) {
+            document.getElementById('chatbotQuestion').value = suggestion;
         }
     </script>
 </body>
